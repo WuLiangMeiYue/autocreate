@@ -1,11 +1,15 @@
 package com.auto.create.file.document;
 
+import javassist.*;
+import javassist.bytecode.ClassFile;
+import javassist.bytecode.FieldInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
+import java.io.*;
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Field;
+import java.util.Arrays;
 
 public class DOCCreate {
 
@@ -14,6 +18,8 @@ public class DOCCreate {
     private static final File DOCUMENT = new File("c:\\users\\administrator\\desktop\\" + "接口文档.doc");
 
     private static final Logger LOGGER = LoggerFactory.getLogger(DOCCreate.class);
+
+    private static final ClassPool POOL = ClassPool.getDefault();
 
     static {
         try {
@@ -30,9 +36,9 @@ public class DOCCreate {
     public static void main(String[] args) {
         try {
             File projectDirectory = new File(
-                    "E:\\ClassManagement\\ClassManagementSystemProject\\src\\main\\java\\com\\school\\management\\api\\controller\\");
+                    "E:\\ClassManagement\\ClassManagementSystemProject\\out\\production\\classes\\com\\school\\management\\api\\controller");
             for (File f : projectDirectory.listFiles()) {
-                readToClass(f.getName(), readComment(f));
+                String content = readComment(f);
                 break;
             }
         } catch (Exception e) {
@@ -40,11 +46,12 @@ public class DOCCreate {
         }
     }
 
-    private static String readComment(File f) throws ClassNotFoundException {
+    private static String readComment(File f) throws NotFoundException {
         String content = "";
         try {
             if (f.canRead()) {
                 FileInputStream is = new FileInputStream(f);
+                readToClass(f.toURI().toURL().toString(), is);
                 byte[] b = new byte[is.available()];
                 int i = 0;
                 int index = 0;
@@ -57,12 +64,30 @@ public class DOCCreate {
             }
         } catch (IOException e) {
             e.printStackTrace();
+        } catch (NoSuchMethodException e) {
+            e.printStackTrace();
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
         }
         return content;
     }
 
-    private static void readToClass(String className, String classPath) throws IOException, ClassNotFoundException {
-//        JavaStringCompiler
-    }
 
+    private static void readToClass(String pathURL, InputStream inputStream) throws IOException, NoSuchMethodException, ClassNotFoundException {
+        CtClass ctClass = POOL.makeClass(inputStream);
+        Object[] objects = ctClass.getAvailableAnnotations();
+        StringBuilder url = new StringBuilder();
+        for (int i = 0; i < objects.length; i++) {
+            Annotation annotation = (Annotation) objects[i];
+            if (annotation.annotationType().getSimpleName().contains("RequestMapping")){
+                String annotationValue = annotation.toString();
+                annotationValue = annotationValue.substring(annotationValue.indexOf("value"), (annotationValue.length())-1);
+                annotationValue = annotationValue.substring(annotationValue.indexOf("{\"")+2, (annotationValue.length())-2);
+                url.append(annotationValue);
+            }
+        }
+        for (CtMethod ctMethod : ctClass.getDeclaredMethods()) {
+            System.out.println(ctMethod.getAnnotations());
+        }
+    }
 }
