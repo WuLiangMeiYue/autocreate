@@ -2,6 +2,7 @@
 /build/
 /target/
 /logs/
+/test/
 !gradle/wrapper/gradle-wrapper.jar
 
 ### STS ###
