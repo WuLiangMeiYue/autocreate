@@ -1,19 +1,22 @@
 package com.auto.create.file.document;
 
-import javassist.*;
-import javassist.bytecode.ClassFile;
-import javassist.bytecode.FieldInfo;
+import javassist.ClassPool;
+import javassist.CtClass;
+import javassist.CtMethod;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.lang.annotation.Annotation;
-import java.lang.reflect.Field;
-import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class DOCCreate {
-
-    private static String basePath = null;
 
     private static final File DOCUMENT = new File("c:\\users\\administrator\\desktop\\" + "接口文档.doc");
 
@@ -23,71 +26,70 @@ public class DOCCreate {
 
     static {
         try {
-            basePath = new File("").getAbsolutePath() + "\\src\\main\\java\\com\\auto\\create\\file\\document\\";
             if (!DOCUMENT.exists()) {
-                DOCUMENT.createNewFile();
+                if (DOCUMENT.createNewFile()) {
+                    LOGGER.info("自动生成接口文档模块初始化完成");
+                }
             }
-            LOGGER.info("自动生成接口文档模块初始化完成");
         } catch (IOException e) {
-            e.printStackTrace();
+            LOGGER.warn(e.getMessage());
         }
     }
 
     public static void main(String[] args) {
         try {
-            File projectDirectory = new File(
-                    "E:\\ClassManagement\\ClassManagementSystemProject\\out\\production\\classes\\com\\school\\management\\api\\controller");
-            for (File f : projectDirectory.listFiles()) {
-                String content = readComment(f);
-                break;
+            File projectDirectory = new File("E:\\ClassManagement\\ClassManagementSystemProject\\out\\production\\classes\\com\\school\\management\\api\\controller");
+            File[] fileList = projectDirectory.listFiles();
+            if (fileList != null) {
+                for (File f : fileList) {
+                    if (!f.getName().contains("$")) {
+                        List<Map<String, Object>> content = readComment(f);
+                        System.out.println(content);
+                    }
+                }
             }
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    private static String readComment(File f) throws NotFoundException {
-        String content = "";
-        try {
-            if (f.canRead()) {
-                FileInputStream is = new FileInputStream(f);
-                readToClass(f.toURI().toURL().toString(), is);
-                byte[] b = new byte[is.available()];
-                int i = 0;
-                int index = 0;
-                while ((i = is.read()) != -1) {
-                    b[index] = (byte) i;
-                    index++;
-                }
-                content = new String(b);
-                is.close();
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        } catch (NoSuchMethodException e) {
-            e.printStackTrace();
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace();
+    private static List<Map<String, Object>> readComment(File f) throws IOException, ClassNotFoundException {
+        List<Map<String, Object>> content = null;
+        if (f.canRead()) {
+            content = readToClass(new FileInputStream(f));
         }
         return content;
     }
 
-
-    private static void readToClass(String pathURL, InputStream inputStream) throws IOException, NoSuchMethodException, ClassNotFoundException {
+    private static List<Map<String, Object>> readToClass(InputStream inputStream) throws IOException, ClassNotFoundException {
         CtClass ctClass = POOL.makeClass(inputStream);
         Object[] objects = ctClass.getAvailableAnnotations();
         StringBuilder url = new StringBuilder();
-        for (int i = 0; i < objects.length; i++) {
-            Annotation annotation = (Annotation) objects[i];
-            if (annotation.annotationType().getSimpleName().contains("RequestMapping")){
+        List<Map<String, Object>> urlAsString = new ArrayList<Map<String, Object>>();
+        for (Object object : objects) {
+            Annotation annotation = (Annotation) object;
+            if (annotation.annotationType().getSimpleName().contains("RequestMapping")) {
                 String annotationValue = annotation.toString();
-                annotationValue = annotationValue.substring(annotationValue.indexOf("value"), (annotationValue.length())-1);
-                annotationValue = annotationValue.substring(annotationValue.indexOf("{\"")+2, (annotationValue.length())-2);
+                annotationValue = annotationValue.substring(annotationValue.indexOf("value"), (annotationValue.length()) - 1);
+                annotationValue = annotationValue.substring(annotationValue.indexOf("{\"") + 2, (annotationValue.length()) - 2);
                 url.append(annotationValue);
             }
         }
         for (CtMethod ctMethod : ctClass.getDeclaredMethods()) {
-            System.out.println(ctMethod.getAnnotations());
+            Object[] objectsList = ctMethod.getAnnotations();
+            for (Object anObjectsList : objectsList) {
+                Annotation annotation = (Annotation) anObjectsList;
+                if (annotation.annotationType().getSimpleName().contains("tMapping")) {
+                    Map<String, Object> map = new HashMap<String, Object>();
+                    String name = annotation.annotationType().getSimpleName();
+                    String annotationValue = annotation.toString();
+                    annotationValue = annotationValue.substring(annotationValue.indexOf("value"), (annotationValue.length()) - 1);
+                    annotationValue = annotationValue.substring(annotationValue.indexOf("{\"") + 2, (annotationValue.length()) - 2);
+                    map.put(name.substring(0, name.indexOf("Mapping")), url + annotationValue);
+                    urlAsString.add(map);
+                }
+            }
         }
+        return urlAsString;
     }
 }
