@@ -92,4 +92,8 @@ public class DOCCreate {
         }
         return urlAsString;
     }
+
+    private static void writeIntoDocument(String content) {
+//        XWPFDocument document = new ();
+    }
 }
