@@ -28,3 +28,4 @@
 /dist/
 /nbdist/
 /.nb-gradle/
+src/test/java/Test.java
